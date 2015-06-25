@@ -1,0 +1,93 @@
+#!/bin/bash
+
+SSH_KEY="/root/.ssh/xivo_id_rsa"
+USER="root"
+SYNC_LOG="/var/log/xivo-sync.log"
+
+SYNC_DIRECTORIES=("/etc/asterisk/extensions_extra.d/"
+                  "/var/lib/consul/raft/"
+                  "/var/lib/xivo/moh"
+                  "/var/lib/xivo/sounds/acd"
+                  "/var/lib/xivo/sounds/playback"
+                  "/var/lib/asterisk/agi-bin/"
+                 )
+
+init() {
+    echo "Initialize ssh key..."
+    if [ -f $SSH_KEY ]; then
+        echo "A key $SSH_KEY already exist!"
+        exit 0
+    fi
+    ssh-keygen -q -b2048 -t rsa -C "SSH key for XIVO PRA" -f $SSH_KEY -N ''
+    copy_id $1
+}
+
+copy_id() {
+    XIVO_SLAVE=$1
+    echo "Copy id to the slave..."
+    ssh-copy-id -i $SSH_KEY $USER@$XIVO_SLAVE
+}
+
+usage() {
+    cat << EOF
+You have to provide some informations to allow building:
+
+    Usage: $(basename $0) [OPTION]
+
+    Options:
+        -i: To init the ssh-key
+        -H: The xivo host slave
+        -h: show this help
+
+EOF
+    exit 0
+}
+
+sync() {
+    echo "Synchronisation..."
+    XIVO_SLAVE=$1
+    if [ -f $SSH_KEY ]; then
+        ssh-add $SSH_KEY 2> /dev/null
+    else
+        echo "Please use -i option first!"
+        exit 1
+    fi
+    
+    for DIRECTORY in ${SYNC_DIRECTORIES[@]}
+    do
+        rsync -q -e "ssh -oPreferredAuthentications=publickey" -avz --delete-after $DIRECTORY $USER@$XIVO_SLAVE:$DIRECTORY 2>> $SYNC_LOG
+        if [ $? -ne 0 ]; then
+            echo "ERROR to sync $DIRECTORY..."
+            echo "Please check log in $SYNC_LOG"
+        fi
+    done
+}
+
+main() {
+    while getopts :H:ih opt
+    do
+        case $opt in
+            i) init=1;;
+            H) xivo_slave=$OPTARG;;
+            h) usage;;
+            \?) echo "$0 : option $OPTARG is not valid" >&2; usage;;
+            :) echo "Missing option argument for -$OPTARG" >&2; exit 1;;
+            *) echo "Unimplemented option: -$OPTARG" >&2; exit 1;;
+        esac
+    done
+
+    if [ -z $xivo_slave ]; then
+        echo "Error missing xivo slave host!"
+        usage
+        exit 1
+    fi
+ 
+    if [ ! -z $init ]; then
+        init $xivo_slave
+        exit 0
+    fi
+
+    sync $xivo_slave
+}
+
+main "$@"
