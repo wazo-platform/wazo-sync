@@ -1,6 +1,6 @@
 Format: http://dep.debian.net/deps/dep5
-Upstream-Name: xivo-auth
-Source: https://github.com/pcadottemichaud/xivo-auth
+Upstream-Name: xivo-ha
+Source: https://github.com/xivo-pbx/xivo-ha
 
 Files: *
 Copyright: 2015 Avencall
