@@ -3,6 +3,7 @@
 SSH_KEY="/root/.ssh/xivo_id_rsa"
 USER="root"
 SYNC_LOG="/var/log/xivo-sync.log"
+HA_CONF="/etc/xivo/ha.conf"
 
 SYNC_DIRECTORIES=("/etc/asterisk/extensions_extra.d/"
                   "/var/lib/consul/raft/"
@@ -65,8 +66,8 @@ sync() {
 
 is_ha_enabled() {
     enabled=0
-    if [ -f /etc/xivo/ha.conf ]; then
-        res=$(cat /etc/xivo/ha.conf | sed -e 's/"//g' | awk -F=":" -v RS="," '$1~/node_type/ {print}' | awk -F": " '{print $2}')
+    if [ -f $HA_CONF ]; then
+        res=$(cat $HA_CONF | sed -e 's/"//g' | awk -F=":" -v RS="," '$1~/node_type/ {print}' | awk -F": " '{print $2}')
         if [ $res == 'enabled' ]; then
             enabled=1
         fi
@@ -80,7 +81,7 @@ is_ha_enabled() {
 }
 
 get_ha_host() {
-    echo $(cat /etc/xivo/ha.conf | sed -e 's/["}]//g' | awk -F=":" -v RS="," '$1~/remote_address/ {print}' | awk -F": " '{print $2}')
+    echo $(cat $HA_CONF | sed -e 's/["}]//g' | awk -F=":" -v RS="," '$1~/remote_address/ {print}' | awk -F": " '{print $2}')
 }
 
 
