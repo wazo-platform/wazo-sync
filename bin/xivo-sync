@@ -101,7 +101,6 @@ main() {
 
     if [ -z $xivo_slave ]; then
         echo "Error missing xivo slave host!"
-        usage
         exit 1
     fi
  
