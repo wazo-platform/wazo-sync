@@ -7,10 +7,11 @@ HA_CONF="/etc/xivo/ha.conf"
 
 SYNC_DIRECTORIES=("/etc/asterisk/extensions_extra.d/"
                   "/var/lib/consul/raft/"
-                  "/var/lib/xivo/moh"
-                  "/var/lib/xivo/sounds/acd"
-                  "/var/lib/xivo/sounds/playback"
+                  "/var/lib/xivo/moh/"
+                  "/var/lib/xivo/sounds/acd/"
+                  "/var/lib/xivo/sounds/playback/"
                   "/var/lib/asterisk/agi-bin/"
+                  "/etc/xivo/asterisk/"
                  )
 
 init() {
