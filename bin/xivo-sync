@@ -68,7 +68,7 @@ is_ha_enabled() {
     enabled=0
     if [ -f $HA_CONF ]; then
         res=$(cat $HA_CONF | sed -e 's/"//g' | awk -F=":" -v RS="," '$1~/node_type/ {print}' | awk -F": " '{print $2}')
-        if [ $res == 'enabled' ]; then
+        if [ $res == 'master' ]; then
             enabled=1
         fi
     fi
