@@ -1,117 +1,112 @@
-#!/bin/bash
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
 
-SSH_KEY="/root/.ssh/xivo_id_rsa"
-USER="root"
-SYNC_LOG="/var/log/xivo-sync.log"
-HA_CONF="/etc/xivo/ha.conf"
+import argparse
+import json
+import logging
+import os.path
+import subprocess
+import sys
+from xivo.xivo_logging import setup_logging
 
-SYNC_DIRECTORIES=("/etc/asterisk/extensions_extra.d/"
-                  "/var/lib/consul/raft/"
-                  "/var/lib/xivo/moh/"
-                  "/var/lib/xivo/sounds/acd/"
-                  "/var/lib/xivo/sounds/playback/"
-                  "/var/lib/asterisk/agi-bin/"
-                  "/etc/xivo/asterisk/"
-                 )
+LOG_FORMAT='%(asctime)s [%(process)d] (%(levelname)s): %(message)s'
+REMOTE_USER = 'root'
+SSH_KEY = '/root/.ssh/xivo_id_rsa'
+SYNC_DIRECTORIES = [
+    '/etc/asterisk/extensions_extra.d',
+    '/etc/xivo/asterisk',
+    '/var/lib/asterisk/agi-bin',
+    '/var/lib/asterisk/moh',
+    '/var/lib/consul/raft',
+    '/var/lib/xivo/sounds/acd',
+    '/var/lib/xivo/sounds/playback',
+]
 
-init() {
-    echo "Initialize ssh key..."
-    if [ -f $SSH_KEY ]; then
-        echo "A key $SSH_KEY already exist!"
-        exit 0
-    fi
-    ssh-keygen -q -b2048 -t rsa -C "SSH key for XIVO PRA" -f $SSH_KEY -N ''
-    copy_id $1
-}
-
-copy_id() {
-    XIVO_SLAVE=$1
-    echo "Copy id to the slave..."
-    ssh-copy-id -i $SSH_KEY $USER@$XIVO_SLAVE
-}
-
-usage() {
-    cat << EOF
-You have to provide some informations to allow building:
-
-    Usage: $(basename $0) [OPTION]
-
-    Options:
-        -i: To init the ssh-key
-        -H: The xivo host slave
-        -h: show this help
-
-EOF
-    exit 0
-}
-
-sync() {
-    echo "Synchronisation..."
-    XIVO_SLAVE=$1
-    if [ -f $SSH_KEY ]; then
-        ssh-add $SSH_KEY 2> /dev/null
-    else
-        echo "Please use -i option first!"
-        exit 1
-    fi
-    
-    for DIRECTORY in ${SYNC_DIRECTORIES[@]}
-    do
-        rsync -q -e "ssh -oPreferredAuthentications=publickey" -avz --delete-after $DIRECTORY $USER@$XIVO_SLAVE:$DIRECTORY 2>> $SYNC_LOG
-        if [ $? -ne 0 ]; then
-            echo "ERROR to sync $DIRECTORY..."
-            echo "Please check log in $SYNC_LOG"
-        fi
-    done
-}
-
-is_ha_enabled() {
-    enabled=0
-    if [ -f $HA_CONF ]; then
-        res=$(cat $HA_CONF | sed -e 's/"//g' | awk -F=":" -v RS="," '$1~/node_type/ {print}' | awk -F": " '{print $2}')
-        if [ $res == 'master' ]; then
-            enabled=1
-        fi
-    fi
-
-    if [ $enabled -eq 0 ]; then
-        echo "HA is not enabled, please configure it!"
-        exit 0
-    fi
-
-}
-
-get_ha_host() {
-    echo $(cat $HA_CONF | sed -e 's/["}]//g' | awk -F=":" -v RS="," '$1~/remote_address/ {print}' | awk -F": " '{print $2}')
-}
+logger = logging.getLogger()
 
 
-main() {
-    is_ha_enabled
-    xivo_slave=$(get_ha_host)
-    
-    while getopts ih opt
-    do
-        case $opt in
-            i) init=1;;
-            h) usage;;
-            \?) echo "$0 : option $OPTARG is not valid" >&2; usage;;
-            *) echo "Unimplemented option: -$OPTARG" >&2; exit 1;;
-        esac
-    done
+def main():
+    args = parse_args()
 
-    if [ -z $xivo_slave ]; then
-        echo "Error missing xivo slave host!"
-        exit 1
-    fi
- 
-    if [ ! -z $init ]; then
-        init $xivo_slave
-        exit 0
-    fi
+    setup_logging('/var/log/xivo-sync.log', foreground=True, log_format=LOG_FORMAT)
+    try:
+        ha_conf = read_ha_conf()
+        if args.init:
+            init(ha_conf)
+        else:
+            sync(ha_conf)
+    except Exception:
+        logger.exception('Unexpected error:')
+        sys.exit(1)
 
-    echo "Launching sync to $xivo_slave..."
-    sync $xivo_slave
-}
 
-main "$@"
+def init(ha_conf):
+    if not ha_conf.is_master():
+        print >>sys.stderr, 'HA not configured or not a master node'
+        sys.exit(1)
+    if ssh_key_exists():
+        print >>sys.stderr, 'SSH key {} already exist'.format(SSH_KEY)
+        sys.exit(1)
+
+    print 'Generating SSH key {}...'.format(SSH_KEY)
+    subprocess.call(['ssh-keygen', '-q', '-t', 'rsa', '-N', '', '-C', 'XiVO HA', '-f', SSH_KEY])
+    print 'Copying SSH key to {} (using ssh-copy-id)...'.format(ha_conf.remote_address())
+    subprocess.call(['ssh-copy-id', '-i', SSH_KEY, '{}@{}'.format(REMOTE_USER, ha_conf.remote_address())])
+
+
+def sync(ha_conf):
+    if not ha_conf.is_master():
+        logger.error('HA not configured or not a master node')
+        sys.exit(1)
+    if not ssh_key_exists():
+        logger.info('SSH key %s not found: not synchronizing', SSH_KEY)
+        sys.exit(0)
+
+    logger.info('Synchronizing to %s...', ha_conf.remote_address())
+    command = [
+        'rsync',
+        '-q', '-aR', '--delete-after',
+        '-e', 'ssh -i {} -o PreferredAuthentications=publickey'.format(SSH_KEY),
+    ]
+    command.extend(SYNC_DIRECTORIES)
+    command.append('{}@{}:/'.format(REMOTE_USER, ha_conf.remote_address()))
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    output = p.communicate()[0]
+    if p.returncode:
+        logger.error('Synchronization failure: rsync exit status %s with output:\n%s', p.returncode, output)
+        sys.exit(1)
+    else:
+        logger.info('Synchronization successful')
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--init', action='store_true')
+    return parser.parse_args()
+
+
+def read_ha_conf():
+    try:
+        with open('/etc/xivo/ha.conf') as fobj:
+            return HAConfig(json.load(fobj))
+    except IOError:
+        return HAConfig(None)
+
+
+class HAConfig(object):
+
+    def __init__(self, obj):
+        self._obj = obj
+
+    def is_master(self):
+        return self._obj and self._obj['node_type'] == 'master'
+
+    def remote_address(self):
+        return self._obj['remote_address']
+
+
+def ssh_key_exists():
+    return os.path.isfile(SSH_KEY)
+
+
+main()

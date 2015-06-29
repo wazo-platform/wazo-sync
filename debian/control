@@ -9,8 +9,8 @@ Homepage: http://xivo.io
 
 Package: xivo-sync
 Architecture: all
-Depends: ${misc:Depends}
-Description: XIVO sync
+Depends: ${misc:Depends}, openssh-client, python (>= 2.7~), python (<< 2.8), rsync, xivo-lib-python
+Description: XiVO sync
  XIVO is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.
  .
