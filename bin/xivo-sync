@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: GPL-3.0+
 
 import argparse
+import glob
 import json
 import logging
 import os.path
@@ -22,9 +23,9 @@ SYNC_DIRECTORIES = [
     '/var/lib/asterisk/moh',
     '/var/lib/wazo-auth-keys',
     '/var/lib/xivo/certificates',
-    '/var/lib/xivo/sounds/acd',
-    '/var/lib/xivo/sounds/playback',
 ]
+SYNC_DIRECTORIES += glob.glob('/var/lib/xivo/sounds/tenants/*/acd')
+SYNC_DIRECTORIES += glob.glob('/var/lib/xivo/sounds/tenants/*/playback')
 
 logger = logging.getLogger()
 
