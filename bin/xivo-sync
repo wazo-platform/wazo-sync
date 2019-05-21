@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright 2015-2018 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2015-2019 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 import argparse
@@ -22,10 +22,9 @@ SYNC_DIRECTORIES = [
     '/var/lib/asterisk/agi-bin',
     '/var/lib/asterisk/moh',
     '/var/lib/wazo-auth-keys',
-    '/var/lib/xivo/certificates',
 ]
-SYNC_DIRECTORIES += glob.glob('/var/lib/xivo/sounds/tenants/*/acd')
-SYNC_DIRECTORIES += glob.glob('/var/lib/xivo/sounds/tenants/*/playback')
+SYNC_DIRECTORIES += glob.glob('/var/lib/wazo/sounds/tenants/*/acd')
+SYNC_DIRECTORIES += glob.glob('/var/lib/wazo/sounds/tenants/*/playback')
 
 logger = logging.getLogger()
 
