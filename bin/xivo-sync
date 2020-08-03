@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright 2015-2019 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2015-2020 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0+
 
 import argparse
@@ -32,7 +32,7 @@ logger = logging.getLogger()
 def main():
     args = parse_args()
 
-    setup_logging('/var/log/xivo-sync.log', foreground=True, log_format=LOG_FORMAT)
+    setup_logging('/var/log/xivo-sync.log', log_format=LOG_FORMAT)
     try:
         ha_conf = read_ha_conf()
         if args.init:
