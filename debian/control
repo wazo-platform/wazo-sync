@@ -7,7 +7,7 @@ Standards-Version: 3.9.6
 
 Package: xivo-sync
 Architecture: all
-Depends: ${misc:Depends}, openssh-client, python (>= 2.7~), python (<< 2.8), rsync, xivo-lib-python
+Depends: ${misc:Depends}, openssh-client, python3, rsync, xivo-lib-python-python3
 Description: Wazo sync
  Wazo is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.
