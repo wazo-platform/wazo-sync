@@ -1,7 +1,6 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# Copyright 2015-2021 The Wazo Authors  (see the AUTHORS file)
-# SPDX-License-Identifier: GPL-3.0+
+#!/usr/bin/env python3
+# Copyright 2015-2022 The Wazo Authors  (see the AUTHORS file)
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 import re
 import argparse
@@ -24,7 +23,9 @@ SYNC_DIRECTORIES = [
     '/var/lib/asterisk/moh',
     '/var/lib/wazo-auth-keys',
 ]
-SOUND_DIR_RE = re.compile(r'^/var/lib/wazo/sounds/tenants/[a-z0-9-]+/(?!monitor|recording).*$')
+SOUND_DIR_RE = re.compile(
+    r'^/var/lib/wazo/sounds/tenants/[a-z0-9-]+/(?!monitor|recording).*$'
+)
 
 
 SYNC_DIRECTORIES += [
@@ -51,16 +52,20 @@ def main():
 
 def init(ha_conf):
     if not ha_conf.is_master():
-        print >>sys.stderr, 'HA not configured or not a master node'
+        print('HA not configured or not a master node', file=sys.stderr)
         sys.exit(1)
     if ssh_key_exists():
-        print >>sys.stderr, 'SSH key {} already exist'.format(SSH_KEY)
+        print(f'SSH key {SSH_KEY} already exist', file=sys.stderr)
         sys.exit(1)
 
-    print 'Generating SSH key {}...'.format(SSH_KEY)
-    subprocess.call(['ssh-keygen', '-q', '-t', 'rsa', '-N', '', '-C', 'XiVO HA', '-f', SSH_KEY])
-    print 'Copying SSH key to {} (using ssh-copy-id)...'.format(ha_conf.remote_address())
-    subprocess.call(['ssh-copy-id', '-i', SSH_KEY, '{}@{}'.format(REMOTE_USER, ha_conf.remote_address())])
+    print(f'Generating SSH key {SSH_KEY}...')
+    subprocess.call(
+        ['ssh-keygen', '-q', '-t', 'rsa', '-N', '', '-C', 'XiVO HA', '-f', SSH_KEY]
+    )
+    print(f'Copying SSH key to {ha_conf.remote_address()} (using ssh-copy-id)...')
+    subprocess.call(
+        ['ssh-copy-id', '-i', SSH_KEY, f'{REMOTE_USER}@{ha_conf.remote_address()}']
+    )
 
 
 def sync(ha_conf):
@@ -74,15 +79,22 @@ def sync(ha_conf):
     logger.info('Synchronizing to %s...', ha_conf.remote_address())
     command = [
         'rsync',
-        '-q', '-aR', '--delete-after',
-        '-e', 'ssh -i {} -o PreferredAuthentications=publickey'.format(SSH_KEY),
+        '-q',
+        '-aR',
+        '--delete-after',
+        '-e',
+        f'ssh -i {SSH_KEY} -o PreferredAuthentications=publickey',
     ]
     command.extend(SYNC_DIRECTORIES)
-    command.append('{}@{}:/'.format(REMOTE_USER, ha_conf.remote_address()))
+    command.append(f'{REMOTE_USER}@{ha_conf.remote_address()}:/')
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output = p.communicate()[0]
     if p.returncode:
-        logger.error('Synchronization failure: rsync exit status %s with output:\n%s', p.returncode, output)
+        logger.error(
+            'Synchronization failure: rsync exit status %s with output:\n%s',
+            p.returncode,
+            output,
+        )
         sys.exit(1)
     else:
         logger.info('Synchronization successful')
@@ -98,12 +110,11 @@ def read_ha_conf():
     try:
         with open('/etc/xivo/ha.conf') as fobj:
             return HAConfig(json.load(fobj))
-    except IOError:
+    except OSError:
         return HAConfig(None)
 
 
-class HAConfig(object):
-
+class HAConfig:
     def __init__(self, obj):
         self._obj = obj
 
