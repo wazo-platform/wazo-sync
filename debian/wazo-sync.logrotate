@@ -1,4 +1,4 @@
-/var/log/xivo-sync.log {
+/var/log/wazo-sync.log {
     daily
     rotate 15
     compress

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2015-2023 The Wazo Authors  (see the AUTHORS file)
+# Copyright 2015-2024 The Wazo Authors  (see the AUTHORS file)
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 import argparse
@@ -36,10 +36,21 @@ SYNC_DIRECTORIES += [
 logger = logging.getLogger()
 
 
+def deprecation_warning():
+    # Deprecated in 24.01
+    print(
+        'Warning: xivo-sync is a deprecated alias to wazo-sync: use wazo-sync instead',
+        file=sys.stderr,
+    )
+
+
 def main():
     args = parse_args()
 
-    setup_logging('/var/log/xivo-sync.log', log_format=LOG_FORMAT)
+    if os.path.basename(sys.argv[0]) == 'xivo-sync':
+        deprecation_warning()
+
+    setup_logging('/var/log/wazo-sync.log', log_format=LOG_FORMAT)
     try:
         ha_conf = read_ha_conf()
         if args.init:
