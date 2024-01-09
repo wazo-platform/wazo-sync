@@ -47,7 +47,7 @@ def deprecation_warning():
 def main():
     args = parse_args()
 
-    if sys.argv[0] == 'xivo-sync':
+    if os.path.basename(sys.argv[0]) == 'xivo-sync':
         deprecation_warning()
 
     setup_logging('/var/log/wazo-sync.log', log_format=LOG_FORMAT)
