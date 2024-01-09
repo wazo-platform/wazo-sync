@@ -1,13 +1,16 @@
-Source: xivo-sync
+Source: wazo-sync
 Section: admin
 Priority: extra
 Maintainer: Wazo Maintainers <dev.wazo@gmail.com>
 Build-Depends: debhelper (>= 12)
 Standards-Version: 3.9.6
 
-Package: xivo-sync
+Package: wazo-sync
 Architecture: all
-Depends: ${misc:Depends}, openssh-client, python3, rsync, xivo-lib-python-python3
+Depends: ${misc:Depends}, openssh-client, python3, rsync, xivo-lib-python-python3, rename
+Provides: xivo-sync
+Replaces: xivo-sync
+Conflicts: xivo-sync
 Description: Wazo sync
  Wazo is a system based on a powerful IPBX, to bring an easy to
  install solution for telephony and related services.

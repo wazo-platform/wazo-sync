@@ -1,4 +1,10 @@
-xivo-sync (0.0.1~xivo1) UNRELEASED; urgency=low
+wazo-sync (0.0.2~wazo1) wazo-dev-bullseye; urgency=medium
+
+  * Rename to wazo-sync
+
+ -- Wazo Maintainers <dev+pkg@wazo.community>  Mon, 08 Jan 2024 10:44:37 -0500
+
+xivo-sync (0.0.1~xivo1) wazo-dev-bullseye; urgency=low
 
   * Initial release.
 
